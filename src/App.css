@@ -1,42 +1,219 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+import { useEffect, useState, useRef } from 'react';
+import { motion, AnimatePresence, useSpring, useMotionValue } from 'framer-motion';
+import { Link } from 'react-scroll';
+
+// --- تعريف أنواع البيانات (Interfaces) عشان TypeScript ميزعلش ---
+interface Project {
+  id: string;
+  title: string;
+  img: string;
+  stack: string;
+  details: string;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+interface Experience {
+  year: string;
+  role: string;
+  company: string;
+  desc: string;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
+// --- مكون الخلفية الحية (Particles) ---
+const LiveBackground = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    let particles: { x: number; y: number; vx: number; vy: number }[] = [];
+    const init = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      particles = Array.from({ length: 90 }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 1.5,
+        vy: (Math.random() - 0.5) * 1.5,
+      }));
+    };
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#a3e635';
+      ctx.strokeStyle = 'rgba(163, 230, 53, 0.1)';
+      particles.forEach((p, i) => {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 1.2, 0, Math.PI * 2); ctx.fill();
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dist = Math.sqrt((p.x - p2.x)**2 + (p.y - p2.y)**2);
+          if (dist < 140) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); }
+        }
+      });
+      requestAnimationFrame(animate);
+    };
+    init(); animate();
+    window.addEventListener('resize', init);
+    return () => window.removeEventListener('resize', init);
+  }, []);
+  return <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none opacity-40" />;
+};
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
+export default function App() {
+  // التعديل السحري هنا: عرفنا الـ State إنها ممكن تكون Project أو null
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [isHovering, setIsHovering] = useState(false);
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const cursorX = useSpring(mouseX, { damping: 25, stiffness: 300 });
+  const cursorY = useSpring(mouseY, { damping: 25, stiffness: 300 });
 
-.card {
-  padding: 2em;
-}
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      mouseX.set(e.clientX);
+      mouseY.set(e.clientY);
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
-.read-the-docs {
-  color: #888;
+  const projects: Project[] = [
+    { id: "01", title: "Neural Network Dev", img: "https://picsum.photos/id/180/800/600", stack: "React • TensorFlow", details: "تطوير محرك ذكاء اصطناعي متقدم لتحليل الأنماط البرمجية وتحسين كفاءة الكود مباشرة في المتصفح." },
+    { id: "02", title: "FinTech Dashboard", img: "https://picsum.photos/id/201/800/600", stack: "Next.js • Kafka", details: "لوحة تحكم مالية تتعامل مع آلاف المعاملات في الثانية باستخدام تقنيات الـ Streaming." },
+    { id: "03", title: "Cloud Scale", img: "https://picsum.photos/id/160/800/600", stack: "AWS • Kubernetes", details: "إدارة وتوزيع خوادم سحابية ضخمة لضمان استقرار الخدمة تحت أحمال ضغط عالية جداً." },
+    { id: "04", title: "System Core", img: "https://picsum.photos/id/0/800/600", stack: "Python • GraphQL", details: "تصميم الهياكل الأساسية للأنظمة الكبيرة وتطبيق معايير الـ Clean Code لسهولة التوسع." }
+  ];
+
+  const experiences: Experience[] = [
+    { year: "Education", role: "Mechanical Engineering", company: "Mansoura University", desc: "خريج هندسة ميكانيكا جامعة المنصورة. هذه الخلفية الهندسية هي سر تميزي في التفكير التحليلي وحل المشكلات البرمجية المعقدة." },
+    { year: "2022 - Present", role: "Senior Full Stack", company: "Tech Leaders", desc: "قيادة تطوير التطبيقات السحابية وتوجيه الفرق التقنية لبناء حلول مبتكرة." },
+    { year: "2020 - 2022", role: "Full Stack Developer", company: "Innovate Soft", desc: "بناء واجهات تفاعلية متطورة وتكامل مع الخدمات السحابية." }
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#020617] text-white overflow-x-hidden font-sans cursor-none selection:bg-lime-400 selection:text-black">
+      <LiveBackground />
+
+      {/* Cursor */}
+      <motion.div className="fixed top-0 left-0 w-2 h-2 bg-lime-400 rounded-full pointer-events-none z-[9999] mix-blend-difference" style={{ x: cursorX, y: cursorY, translateX: '-50%', translateY: '-50%' }} />
+      <motion.div className="fixed top-0 left-0 w-10 h-10 border border-lime-400/50 rounded-full pointer-events-none z-[9998] hidden md:block" style={{ x: useSpring(mouseX, { damping: 40, stiffness: 200 }), y: useSpring(mouseY, { damping: 40, stiffness: 200 }), translateX: '-50%', translateY: '-50%' }} animate={{ scale: isHovering || selectedProject ? 2 : 1 }} />
+
+      {/* Nav */}
+      <nav className="fixed top-6 w-full flex justify-center z-[1000] px-4">
+        <div className="bg-black/40 backdrop-blur-xl border border-white/10 p-2 rounded-full flex gap-1 shadow-2xl">
+          {['home', 'about', 'projects', 'timeline', 'contact'].map((item) => (
+            <Link key={item} to={item} spy={true} smooth={true} duration={800} activeClass="bg-lime-400 !text-black shadow-[0_0_15px_#a3e635]" className="px-5 py-2 rounded-full text-[10px] uppercase font-bold tracking-widest text-slate-400 hover:text-white cursor-pointer transition-all">
+              {item}
+            </Link>
+          ))}
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <section id="home" className="min-h-screen flex items-center px-6 md:px-24 pt-20 relative z-10">
+        <div className="max-w-4xl">
+          <motion.h1 initial={{ x: -100, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="text-6xl md:text-[110px] font-black leading-none uppercase tracking-tighter">
+            MOHAMED <br /> <span className="text-transparent" style={{ WebkitTextStroke: '2px #a3e635' }}>ELSERFY</span>
+          </motion.h1>
+          <p className="mt-8 text-lime-400 font-mono tracking-[6px] uppercase text-sm md:text-xl italic">Mechanical Engineer & Senior Full Stack Expert</p>
+          <div className="mt-12 flex flex-wrap gap-4">
+             <Link to="projects" smooth={true}><button onMouseEnter={()=>setIsHovering(true)} onMouseLeave={()=>setIsHovering(false)} className="px-10 py-4 bg-lime-400 text-black font-black uppercase text-xs tracking-widest hover:bg-white transition-all shadow-lg">View Works</button></Link>
+             <a href="/cv.pdf" download="Mohamed_Elserfy_CV.pdf" className="px-10 py-4 border border-white/20 hover:bg-white hover:text-black font-black uppercase text-xs tracking-widest transition-all">Download CV</a>
+          </div>
+        </div>
+      </section>
+
+      {/* About */}
+      <section id="about" className="py-32 px-6 md:px-24 relative z-10">
+        <div className="grid md:grid-cols-2 gap-20 items-center">
+          <div className="space-y-6">
+            <h2 className="text-4xl md:text-6xl font-black italic uppercase text-lime-400">The Journey</h2>
+            <p className="text-slate-300 text-lg leading-relaxed max-w-xl">
+               من جامعة المنصورة كمهندس ميكانيكا إلى عالم البرمجيات كخبير Full Stack. أحمل العقلية الهندسية في بناء أنظمة برمجية متينة وقابلة للتوسع.
+            </p>
+          </div>
+          <div className="h-[400px] bg-slate-900/40 border border-white/5 rounded-[4rem] relative flex items-center justify-center backdrop-blur-sm">
+             <div className="text-9xl font-black opacity-5 select-none">ENGR</div>
+             <motion.div animate={{ rotate: 360 }} transition={{ duration: 30, repeat: Infinity, ease: "linear" }} className="absolute inset-0 border-[1px] border-dashed border-lime-400/10 rounded-full scale-90" />
+          </div>
+        </div>
+      </section>
+
+      {/* Projects */}
+      <section id="projects" className="py-32 px-6 md:px-24 relative z-10 bg-black/30">
+        <h2 className="text-5xl md:text-7xl font-black mb-20 italic uppercase text-center tracking-tighter">Engineered Works</h2>
+        <div className="grid md:grid-cols-2 gap-12">
+          {projects.map(p => (
+            <motion.div key={p.id} whileHover={{ y: -15 }} onMouseEnter={()=>setIsHovering(true)} onMouseLeave={()=>setIsHovering(false)} onClick={() => setSelectedProject(p)} className="group cursor-pointer bg-slate-950 border border-white/5 rounded-[3rem] overflow-hidden shadow-2xl transition-all hover:border-lime-400/30">
+              <div className="h-80 overflow-hidden relative">
+                <img src={p.img} alt={p.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000" />
+              </div>
+              <div className="p-10">
+                <h3 className="text-3xl font-bold uppercase italic group-hover:text-lime-400 transition-colors">{p.title}</h3>
+                <p className="text-slate-500 mt-4 text-[10px] font-bold tracking-[4px] uppercase">{p.stack}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Timeline */}
+      <section id="timeline" className="py-32 px-6 md:px-24 relative z-10">
+        <h2 className="text-4xl md:text-6xl font-black mb-20 italic uppercase border-l-8 border-lime-400 pl-8">Timeline</h2>
+        <div className="space-y-16">
+          {experiences.map((exp, idx) => (
+            <div key={idx} className="grid md:grid-cols-[250px_1fr] gap-8 border-b border-white/5 pb-12">
+              <div className="text-lime-400 font-mono text-xl">{exp.year}</div>
+              <div>
+                <h3 className="text-3xl font-bold uppercase">{exp.role}</h3>
+                <p className="text-slate-400 font-bold mb-4 text-sm">{exp.company}</p>
+                <p className="text-slate-500 text-lg leading-relaxed max-w-3xl">{exp.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Contact */}
+      <section id="contact" className="py-32 px-6 md:px-24 text-center relative z-10">
+        <div className="max-w-5xl mx-auto bg-slate-950/40 border border-white/5 p-16 md:p-24 rounded-[5rem] backdrop-blur-2xl">
+          <h2 className="text-5xl md:text-8xl font-black mb-12 italic uppercase tracking-tighter">Start A Project</h2>
+          <a href="mailto:mohamedelserfyy@gmail.com" className="text-2xl md:text-5xl font-light hover:text-lime-400 transition-colors block break-all underline decoration-lime-400/10">mohamedelserfyy@gmail.com</a>
+          <div className="pt-12">
+            <a href="https://wa.me/201000477268" target="_blank" rel="noreferrer" className="inline-block bg-lime-400 text-black px-16 py-8 rounded-full font-black uppercase text-xs tracking-[5px] hover:scale-110 transition-transform shadow-2xl">Connect WhatsApp</a>
+          </div>
+        </div>
+      </section>
+
+      {/* Modal */}
+      <AnimatePresence>
+        {selectedProject && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/98 backdrop-blur-3xl">
+            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} className="bg-slate-900 border border-lime-400/20 w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-[3.5rem] relative">
+              <button onClick={() => setSelectedProject(null)} className="absolute top-8 right-8 w-14 h-14 bg-lime-400 text-black rounded-full font-black z-50 flex items-center justify-center hover:rotate-90 transition-transform">✕</button>
+              <img src={selectedProject.img} className="w-full h-[400px] object-cover" />
+              <div className="p-12 md:p-20">
+                <h2 className="text-5xl font-black text-lime-400 uppercase italic mb-8 tracking-tighter">{selectedProject.title}</h2>
+                <p className="text-slate-300 text-xl leading-relaxed font-light">{selectedProject.details}</p>
+                <div className="mt-8 pt-8 border-t border-white/5">
+                  <p className="text-slate-500 font-mono text-xs uppercase tracking-widest">Tech Stack: <span className="text-white ml-2">{selectedProject.stack}</span></p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <style>{`
+        * { cursor: none !important; }
+        @media (max-width: 768px) { * { cursor: auto !important; } }
+        html { scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #020617; }
+        ::-webkit-scrollbar-thumb { background: #a3e635; border-radius: 10px; }
+      `}</style>
+    </div>
+  );
 }
